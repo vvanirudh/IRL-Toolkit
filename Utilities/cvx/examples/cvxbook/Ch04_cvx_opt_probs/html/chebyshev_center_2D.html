@@ -1,0 +1,180 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      --><title>Section 4.3.1: Compute and display the Chebyshev center of a 2D polyhedron</title><meta name="generator" content="MATLAB 7.9"><meta name="date" content="2009-11-12"><meta name="m-file" content="chebyshev_center_2D_"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>Section 4.3.1: Compute and display the Chebyshev center of a 2D polyhedron</h1><pre class="codeinput"><span class="comment">% Boyd &amp; Vandenberghe, "Convex Optimization"</span>
+<span class="comment">% Jo&euml;lle Skaf - 08/16/05</span>
+<span class="comment">% (a figure is generated)</span>
+<span class="comment">%</span>
+<span class="comment">% The goal is to find the largest Euclidean ball (i.e. its center and</span>
+<span class="comment">% radius) that lies in a polyhedron described by linear inequalites in this</span>
+<span class="comment">% fashion: P = {x : a_i'*x &lt;= b_i, i=1,...,m} where x is in R^2</span>
+
+<span class="comment">% Generate the input data</span>
+a1 = [ 2;  1];
+a2 = [ 2; -1];
+a3 = [-1;  2];
+a4 = [-1; -2];
+b = ones(4,1);
+
+<span class="comment">% Create and solve the model</span>
+cvx_begin
+    variable <span class="string">r(1)</span>
+    variable <span class="string">x_c(2)</span>
+    maximize ( r )
+    a1'*x_c + r*norm(a1,2) &lt;= b(1);
+    a2'*x_c + r*norm(a2,2) &lt;= b(2);
+    a3'*x_c + r*norm(a3,2) &lt;= b(3);
+    a4'*x_c + r*norm(a4,2) &lt;= b(4);
+cvx_end
+
+<span class="comment">% Generate the figure</span>
+x = linspace(-2,2);
+theta = 0:pi/100:2*pi;
+plot( x, -x*a1(1)./a1(2) + b(1)./a1(2),<span class="string">'b-'</span>);
+hold <span class="string">on</span>
+plot( x, -x*a2(1)./a2(2) + b(2)./a2(2),<span class="string">'b-'</span>);
+plot( x, -x*a3(1)./a3(2) + b(3)./a3(2),<span class="string">'b-'</span>);
+plot( x, -x*a4(1)./a4(2) + b(4)./a4(2),<span class="string">'b-'</span>);
+plot( x_c(1) + r*cos(theta), x_c(2) + r*sin(theta), <span class="string">'r'</span>);
+plot(x_c(1),x_c(2),<span class="string">'k+'</span>)
+xlabel(<span class="string">'x_1'</span>)
+ylabel(<span class="string">'x_2'</span>)
+title(<span class="string">'Largest Euclidean ball lying in a 2D polyhedron'</span>);
+axis([-1 1 -1 1])
+axis <span class="string">equal</span>
+</pre><pre class="codeoutput"> 
+Calling sedumi: 4 variables, 3 equality constraints
+   For improved efficiency, sedumi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.21 by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+eqs m = 3, order n = 5, dim = 5, blocks = 1
+nnz(A) = 12 + 0, nnz(ADA) = 9, nnz(L) = 6
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            4.47E+01 0.000
+  1 :  -6.25E-02 1.08E+01 0.000 0.2426 0.9000 0.9000   1.41  1  1  4.0E+00
+  2 :   4.05E-01 2.36E+00 0.000 0.2180 0.9000 0.9000   2.92  1  1  3.7E-01
+  3 :   4.46E-01 6.75E-02 0.000 0.0286 0.9900 0.9900   1.38  1  1  8.6E-03
+  4 :   4.47E-01 2.06E-06 0.070 0.0000 1.0000 1.0000   1.01  1  1  
+iter seconds digits       c*x               b*y
+  4      0.0   Inf  4.4721359550e-01  4.4721359550e-01
+|Ax-b| =   2.2e-16, [Ay-c]_+ =   0.0E+00, |x|=  2.4e-01, |y|=  4.5e-01
+
+Detailed timing (sec)
+   Pre          IPM          Post
+0.000E+00    3.000E-02    0.000E+00    
+Max-norms: ||b||=1, ||c|| = 1,
+Cholesky |add|=0, |skip| = 0, ||L.L|| = 1.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.447214
+</pre><img vspace="5" hspace="5" src="chebyshev_center_2D__01.png" alt=""> <p class="footer"><br>
+      Published with MATLAB&reg; 7.9<br></p></div><!--
+##### SOURCE BEGIN #####
+%% Section 4.3.1: Compute and display the Chebyshev center of a 2D polyhedron
+
+% Boyd & Vandenberghe, "Convex Optimization"
+% Joëlle Skaf - 08/16/05
+% (a figure is generated)
+%
+% The goal is to find the largest Euclidean ball (i.e. its center and
+% radius) that lies in a polyhedron described by linear inequalites in this
+% fashion: P = {x : a_i'*x <= b_i, i=1,...,m} where x is in R^2
+
+% Generate the input data
+a1 = [ 2;  1];
+a2 = [ 2; -1];
+a3 = [-1;  2];
+a4 = [-1; -2];
+b = ones(4,1);
+
+% Create and solve the model
+cvx_begin
+    variable r(1)
+    variable x_c(2)
+    maximize ( r )
+    a1'*x_c + r*norm(a1,2) <= b(1);
+    a2'*x_c + r*norm(a2,2) <= b(2);
+    a3'*x_c + r*norm(a3,2) <= b(3);
+    a4'*x_c + r*norm(a4,2) <= b(4);
+cvx_end
+
+% Generate the figure
+x = linspace(-2,2);
+theta = 0:pi/100:2*pi;
+plot( x, -x*a1(1)./a1(2) + b(1)./a1(2),'b-');
+hold on
+plot( x, -x*a2(1)./a2(2) + b(2)./a2(2),'b-');
+plot( x, -x*a3(1)./a3(2) + b(3)./a3(2),'b-');
+plot( x, -x*a4(1)./a4(2) + b(4)./a4(2),'b-');
+plot( x_c(1) + r*cos(theta), x_c(2) + r*sin(theta), 'r');
+plot(x_c(1),x_c(2),'k+')
+xlabel('x_1')
+ylabel('x_2')
+title('Largest Euclidean ball lying in a 2D polyhedron');
+axis([-1 1 -1 1])
+axis equal
+
+##### SOURCE END #####
+--></body></html>

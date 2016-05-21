@@ -1,0 +1,310 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      --><title>Exercise 5.19c: Markovitz portfolio optimization w/ diversification constraint</title><meta name="generator" content="MATLAB 7.9"><meta name="date" content="2009-11-12"><meta name="m-file" content="ex_5_19_"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>Exercise 5.19c: Markovitz portfolio optimization w/ diversification constraint</h1><pre class="codeinput"><span class="comment">% Boyd &amp; Vandenberghe, "Convex Optimization"</span>
+<span class="comment">% Jo&euml;lle Skaf - 08/29/05</span>
+<span class="comment">%</span>
+<span class="comment">% Solves an extension of the classical Markovitz portfolio optimization</span>
+<span class="comment">% problem:      minimize    x'Sx</span>
+<span class="comment">%                   s.t.    p_'*x &gt;= r_min</span>
+<span class="comment">%                           1'*x = 1,   x &gt;= 0</span>
+<span class="comment">%                           sum_{i=1}^{0.1*n}x[i] &lt;= alpha</span>
+<span class="comment">% where p_ and S are the mean and covariance matrix of the price range</span>
+<span class="comment">% vector p, x[i] is the ith greatest component in x.</span>
+<span class="comment">% The last constraint can be replaced by this equivalent set of constraints</span>
+<span class="comment">%                           r*t + sum(u) &lt;= alpha</span>
+<span class="comment">%                           t*1 + u &gt;= x</span>
+<span class="comment">%                           u &gt;= 0</span>
+
+<span class="comment">% Input data</span>
+randn(<span class="string">'state'</span>,0);
+n = 25;
+p_mean = randn(n,1);
+temp = randn(n);
+sig = temp'*temp;
+r = floor(0.1*n);
+alpha = 0.8;
+r_min = 1;
+
+<span class="comment">% original formulation</span>
+fprintf(1,<span class="string">'Computing the optimal Markovitz portfolio: \n'</span>);
+fprintf(1,<span class="string">'# using the original formulation ... '</span>);
+
+cvx_begin
+    variable <span class="string">x1(n)</span>
+    minimize ( quad_form(x1,sig) )
+    p_mean'*x1 &gt;= r_min;
+    ones(1,n)*x1 == 1;
+    x1 &gt;= 0;
+    sum_largest(x1,r) &lt;= alpha;
+cvx_end
+
+fprintf(1,<span class="string">'Done! \n'</span>);
+opt1 = cvx_optval;
+
+<span class="comment">% equivalent formulation</span>
+fprintf(1,<span class="string">'# using an equivalent formulation by replacing the diversification\n'</span>);
+fprintf(1,<span class="string">'  constraint by an equivalent set of linear constraints...'</span>);
+
+cvx_begin
+    variables <span class="string">x2(n)</span> <span class="string">u(n)</span> <span class="string">t(1)</span>
+    minimize ( quad_form(x2,sig) )
+    p_mean'*x2 &gt;= r_min;
+    sum(x2) == 1;
+    x2 &gt;= 0;
+    r*t + sum(u) &lt;= alpha;
+    t*ones(n,1) + u &gt;= x2;
+    u &gt;= 0;
+cvx_end
+
+fprintf(1,<span class="string">'Done! \n'</span>);
+opt2 = cvx_optval;
+
+<span class="comment">% Displaying results</span>
+disp(<span class="string">'------------------------------------------------------------------------'</span>);
+disp(<span class="string">'The optimal portfolios obtained from the original problem formulation and'</span>);
+disp(<span class="string">'from the equivalent formulation are respectively: '</span>);
+disp([x1 x2])
+disp(<span class="string">'They are equal as expected!'</span>);
+</pre><pre class="codeoutput">Computing the optimal Markovitz portfolio: 
+# using the original formulation ...  
+Calling sedumi: 105 variables, 52 equality constraints
+   For improved efficiency, sedumi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.21 by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+eqs m = 52, order n = 81, dim = 107, blocks = 3
+nnz(A) = 528 + 0, nnz(ADA) = 1452, nnz(L) = 1107
+Handling 1 + 1 dense columns.
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            1.31E+00 0.000
+  1 :  -9.14E+00 5.48E-01 0.000 0.4184 0.9000 0.9000   2.52  1  1  1.1E+01
+  2 :  -2.32E+01 3.19E-01 0.000 0.5817 0.9000 0.9000   4.27  1  1  2.4E+00
+  3 :  -2.65E+01 1.24E-01 0.000 0.3904 0.9000 0.9000   3.26  1  1  4.3E-01
+  4 :  -2.70E+01 2.98E-02 0.000 0.2397 0.9000 0.9000   1.59  1  1  8.0E-02
+  5 :  -2.71E+01 8.92E-03 0.000 0.2992 0.9000 0.9000   1.16  1  1  2.3E-02
+  6 :  -2.71E+01 2.31E-03 0.000 0.2590 0.9000 0.9000   1.05  1  1  5.7E-03
+  7 :  -2.71E+01 4.49E-04 0.000 0.1945 0.9000 0.9000   1.02  1  1  1.1E-03
+  8 :  -2.71E+01 4.33E-06 0.462 0.0096 0.9900 0.0000   1.00  1  1  1.3E-04
+  9 :  -2.71E+01 6.50E-08 0.000 0.0150 0.9901 0.9900   1.00  1  1  2.4E-06
+ 10 :  -2.71E+01 1.15E-08 0.000 0.1766 0.9066 0.9000   1.00  1  2  4.6E-07
+ 11 :  -2.71E+01 2.28E-09 0.000 0.1986 0.9035 0.9000   1.00  2  2  9.4E-08
+ 12 :  -2.71E+01 3.73E-10 0.000 0.1634 0.9000 0.9059   1.00  7  7  1.5E-08
+ 13 :  -2.71E+01 7.72E-11 0.000 0.2071 0.9000 0.8650   1.00 13 13  3.2E-09
+
+iter seconds digits       c*x               b*y
+ 13      0.1   Inf -2.7109320284e+01 -2.7109320270e+01
+|Ax-b| =   3.1e-08, [Ay-c]_+ =   1.9E-09, |x|=  4.0e+01, |y|=  6.4e-01
+
+Detailed timing (sec)
+   Pre          IPM          Post
+1.000E-02    1.200E-01    0.000E+00    
+Max-norms: ||b||=5.271830e+01, ||c|| = 1,
+Cholesky |add|=0, |skip| = 25, ||L.L|| = 8.37008.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.75017
+Done! 
+# using an equivalent formulation by replacing the diversification
+  constraint by an equivalent set of linear constraints... 
+Calling sedumi: 105 variables, 52 equality constraints
+   For improved efficiency, sedumi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.21 by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+eqs m = 52, order n = 81, dim = 107, blocks = 3
+nnz(A) = 528 + 0, nnz(ADA) = 1452, nnz(L) = 1107
+Handling 1 + 1 dense columns.
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            1.31E+00 0.000
+  1 :  -9.14E+00 5.48E-01 0.000 0.4184 0.9000 0.9000   2.52  1  1  1.1E+01
+  2 :  -2.32E+01 3.19E-01 0.000 0.5817 0.9000 0.9000   4.27  1  1  2.4E+00
+  3 :  -2.65E+01 1.24E-01 0.000 0.3904 0.9000 0.9000   3.26  1  1  4.3E-01
+  4 :  -2.70E+01 2.98E-02 0.000 0.2397 0.9000 0.9000   1.59  1  1  8.0E-02
+  5 :  -2.71E+01 8.92E-03 0.000 0.2992 0.9000 0.9000   1.16  1  1  2.3E-02
+  6 :  -2.71E+01 2.31E-03 0.000 0.2590 0.9000 0.9000   1.05  1  1  5.7E-03
+  7 :  -2.71E+01 4.49E-04 0.000 0.1945 0.9000 0.9000   1.02  1  1  1.1E-03
+  8 :  -2.71E+01 4.33E-06 0.462 0.0096 0.9900 0.0000   1.00  1  1  1.3E-04
+  9 :  -2.71E+01 6.50E-08 0.000 0.0150 0.9901 0.9900   1.00  1  1  2.4E-06
+ 10 :  -2.71E+01 1.15E-08 0.000 0.1766 0.9066 0.9000   1.00  1  2  4.6E-07
+ 11 :  -2.71E+01 2.28E-09 0.000 0.1986 0.9035 0.9000   1.00  2  2  9.4E-08
+ 12 :  -2.71E+01 3.73E-10 0.000 0.1633 0.9000 0.9059   1.00  7  7  1.5E-08
+ 13 :  -2.71E+01 7.64E-11 0.000 0.2052 0.9000 0.8650   1.00  9 13  3.1E-09
+
+iter seconds digits       c*x               b*y
+ 13      0.1   Inf -2.7109320284e+01 -2.7109320270e+01
+|Ax-b| =   3.0e-08, [Ay-c]_+ =   1.9E-09, |x|=  4.0e+01, |y|=  6.4e-01
+
+Detailed timing (sec)
+   Pre          IPM          Post
+1.000E-02    8.000E-02    0.000E+00    
+Max-norms: ||b||=5.271830e+01, ||c|| = 1,
+Cholesky |add|=0, |skip| = 25, ||L.L|| = 8.37021.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.75017
+Done! 
+------------------------------------------------------------------------
+The optimal portfolios obtained from the original problem formulation and
+from the equivalent formulation are respectively: 
+    0.0000    0.0000
+   -0.0000   -0.0000
+    0.1342    0.1342
+    0.0000    0.0000
+    0.0000    0.0000
+    0.1177    0.1177
+    0.1134    0.1134
+    0.0123    0.0123
+    0.0904    0.0904
+    0.0256    0.0256
+    0.0451    0.0451
+    0.0437    0.0437
+   -0.0000   -0.0000
+    0.1435    0.1435
+   -0.0000   -0.0000
+    0.0086    0.0086
+    0.1177    0.1177
+    0.0000    0.0000
+    0.0000    0.0000
+   -0.0000   -0.0000
+    0.0000    0.0000
+    0.0000    0.0000
+    0.0313    0.0313
+    0.1164    0.1164
+   -0.0000   -0.0000
+
+They are equal as expected!
+</pre><p class="footer"><br>
+      Published with MATLAB&reg; 7.9<br></p></div><!--
+##### SOURCE BEGIN #####
+%% Exercise 5.19c: Markovitz portfolio optimization w/ diversification constraint
+
+% Boyd & Vandenberghe, "Convex Optimization"
+% Joëlle Skaf - 08/29/05
+%
+% Solves an extension of the classical Markovitz portfolio optimization
+% problem:      minimize    x'Sx
+%                   s.t.    p_'*x >= r_min
+%                           1'*x = 1,   x >= 0
+%                           sum_{i=1}^{0.1*n}x[i] <= alpha
+% where p_ and S are the mean and covariance matrix of the price range
+% vector p, x[i] is the ith greatest component in x.
+% The last constraint can be replaced by this equivalent set of constraints
+%                           r*t + sum(u) <= alpha
+%                           t*1 + u >= x
+%                           u >= 0
+
+% Input data
+randn('state',0);
+n = 25;
+p_mean = randn(n,1);
+temp = randn(n);
+sig = temp'*temp;
+r = floor(0.1*n);
+alpha = 0.8;
+r_min = 1;
+
+% original formulation
+fprintf(1,'Computing the optimal Markovitz portfolio: \n');
+fprintf(1,'# using the original formulation ... ');
+
+cvx_begin
+    variable x1(n)
+    minimize ( quad_form(x1,sig) )
+    p_mean'*x1 >= r_min;
+    ones(1,n)*x1 == 1;
+    x1 >= 0;
+    sum_largest(x1,r) <= alpha;
+cvx_end
+
+fprintf(1,'Done! \n');
+opt1 = cvx_optval;
+
+% equivalent formulation
+fprintf(1,'# using an equivalent formulation by replacing the diversification\n');
+fprintf(1,'  constraint by an equivalent set of linear constraints...');
+
+cvx_begin
+    variables x2(n) u(n) t(1)
+    minimize ( quad_form(x2,sig) )
+    p_mean'*x2 >= r_min;
+    sum(x2) == 1;
+    x2 >= 0;
+    r*t + sum(u) <= alpha;
+    t*ones(n,1) + u >= x2;
+    u >= 0;
+cvx_end
+
+fprintf(1,'Done! \n');
+opt2 = cvx_optval;
+
+% Displaying results
+disp('REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH');
+disp('The optimal portfolios obtained from the original problem formulation and');
+disp('from the equivalent formulation are respectively: ');
+disp([x1 x2])
+disp('They are equal as expected!');
+
+##### SOURCE END #####
+--></body></html>

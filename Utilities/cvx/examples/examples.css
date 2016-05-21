@@ -1,0 +1,61 @@
+/*
+ * CSS style for CVX's example library
+ * Heavily stripped and adapted from jemdoc's default
+ * and from mktree.css
+ */
+ 
+body {
+	background: white;
+	font-family: "Georgia", "Bookman Old Style", serif;
+	margin: 0;
+}
+
+a {
+	color: #224b8d;
+	text-decoration: none;
+}
+
+a:hover {
+	border-bottom: 1px gray dotted;
+}
+
+p {
+	margin-top: 0;
+	margin-bottom: 0.8em;
+	padding: 0;
+	line-height: 1.35;
+}
+
+#fwtitle {
+	background-color: #527bbd;
+	border-color: #888888;
+	border-style: solid;
+	border-width: 0px 0px 5px 0px;
+}	
+
+h1 {
+	margin: 0;
+	font-size: 165%;
+	padding: 0.35em;
+	color: #f0f0ff;
+	text-align: right;
+	font-variant: small-caps;
+}
+
+#layout-content {
+	padding-top: 0.5em;
+	padding-left: 1em;
+	padding-right: 1em;
+}
+
+div#footer {
+	font-size: small;
+	border-top: 1px solid gray;
+	padding-top: 0.1em;
+	margin-top: 4;
+}
+
+div#footer-text {
+	float: left;
+	padding-bottom: 8px;
+}

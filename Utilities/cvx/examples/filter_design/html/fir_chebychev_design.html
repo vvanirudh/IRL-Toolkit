@@ -1,0 +1,263 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      --><title>Chebychev design of an FIR filter given a desired H(w)</title><meta name="generator" content="MATLAB 7.9"><meta name="date" content="2009-11-12"><meta name="m-file" content="fir_chebychev_design_"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>Chebychev design of an FIR filter given a desired H(w)</h1><pre class="codeinput"><span class="comment">% "Filter design" lecture notes (EE364) by S. Boyd</span>
+<span class="comment">% (figures are generated)</span>
+<span class="comment">%</span>
+<span class="comment">% Designs an FIR filter given a desired frequency response H_des(w).</span>
+<span class="comment">% The design is judged by the maximum absolute error (Chebychev norm).</span>
+<span class="comment">% This is a convex problem (after sampling it can be formulated as an SOCP).</span>
+<span class="comment">%</span>
+<span class="comment">%   minimize   max |H(w) - H_des(w)|     for w in [0,pi]</span>
+<span class="comment">%</span>
+<span class="comment">% where H is the frequency response function and variable is h</span>
+<span class="comment">% (the filter impulse response).</span>
+<span class="comment">%</span>
+<span class="comment">% Written for CVX by Almir Mutapcic 02/02/06</span>
+
+<span class="comment">%********************************************************************</span>
+<span class="comment">% problem specs</span>
+<span class="comment">%********************************************************************</span>
+<span class="comment">% number of FIR coefficients (including the zeroth one)</span>
+n = 20;
+
+<span class="comment">% rule-of-thumb frequency discretization (Cheney's Approx. Theory book)</span>
+m = 15*n;
+w = linspace(0,pi,m)'; <span class="comment">% omega</span>
+
+<span class="comment">%********************************************************************</span>
+<span class="comment">% construct the desired filter</span>
+<span class="comment">%********************************************************************</span>
+<span class="comment">% fractional delay</span>
+D = 8.25;            <span class="comment">% delay value</span>
+Hdes = exp(-j*D*w);  <span class="comment">% desired frequency response</span>
+
+<span class="comment">% Gaussian filter with linear phase (uncomment lines below for this design)</span>
+<span class="comment">% var = 0.05;</span>
+<span class="comment">% Hdes = 1/(sqrt(2*pi*var))*exp(-(w-pi/2).^2/(2*var));</span>
+<span class="comment">% Hdes = Hdes.*exp(-j*n/2*w);</span>
+
+<span class="comment">%*********************************************************************</span>
+<span class="comment">% solve the minimax (Chebychev) design problem</span>
+<span class="comment">%*********************************************************************</span>
+<span class="comment">% A is the matrix used to compute the frequency response</span>
+<span class="comment">% A(w,:) = [1 exp(-j*w) exp(-j*2*w) ... exp(-j*n*w)]</span>
+A = exp( -j*kron(w,[0:n-1]) );
+
+<span class="comment">% optimal Chebyshev filter formulation</span>
+cvx_begin
+  variable <span class="string">h(n,1)</span>
+  minimize( max( abs( A*h - Hdes ) ) )
+cvx_end
+
+<span class="comment">% check if problem was successfully solved</span>
+disp([<span class="string">'Problem is '</span> cvx_status])
+<span class="keyword">if</span> ~strfind(cvx_status,<span class="string">'Solved'</span>)
+  h = [];
+<span class="keyword">end</span>
+
+<span class="comment">%*********************************************************************</span>
+<span class="comment">% plotting routines</span>
+<span class="comment">%*********************************************************************</span>
+<span class="comment">% plot the FIR impulse reponse</span>
+figure(1)
+stem([0:n-1],h)
+xlabel(<span class="string">'n'</span>)
+ylabel(<span class="string">'h(n)'</span>)
+
+<span class="comment">% plot the frequency response</span>
+H = [exp(-j*kron(w,[0:n-1]))]*h;
+figure(2)
+<span class="comment">% magnitude</span>
+subplot(2,1,1);
+plot(w,20*log10(abs(H)),w,20*log10(abs(Hdes)),<span class="string">'--'</span>)
+xlabel(<span class="string">'w'</span>)
+ylabel(<span class="string">'mag H in dB'</span>)
+axis([0 pi -30 10])
+legend(<span class="string">'optimized'</span>,<span class="string">'desired'</span>,<span class="string">'Location'</span>,<span class="string">'SouthEast'</span>)
+<span class="comment">% phase</span>
+subplot(2,1,2)
+plot(w,angle(H))
+axis([0,pi,-pi,pi])
+xlabel(<span class="string">'w'</span>), ylabel(<span class="string">'phase H(w)'</span>)
+</pre><pre class="codeoutput"> 
+Calling sedumi: 899 variables, 21 equality constraints
+   For improved efficiency, sedumi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.21 by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+eqs m = 21, order n = 601, dim = 900, blocks = 301
+nnz(A) = 11958 + 0, nnz(ADA) = 441, nnz(L) = 231
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            3.04E+02 0.000
+  1 :  -1.52E+00 1.06E+02 0.000 0.3488 0.9000 0.9000   0.86  1  1  2.5E+02
+  2 :  -7.11E-01 3.10E+01 0.000 0.2925 0.9000 0.9000   3.41  1  1  2.5E+01
+  3 :  -6.95E-01 7.21E+00 0.000 0.2327 0.9000 0.9000   1.68  1  1  5.1E+00
+  4 :  -7.07E-01 6.25E-01 0.000 0.0867 0.9900 0.9900   1.03  1  1  4.4E-01
+  5 :  -7.07E-01 3.67E-03 0.000 0.0059 0.9990 0.9990   1.01  1  1  2.6E-03
+  6 :  -7.07E-01 2.22E-04 0.092 0.0604 0.9900 0.9903   1.00  1  1  1.6E-04
+  7 :  -7.07E-01 2.59E-05 0.000 0.1166 0.9097 0.9000   1.00  1  1  1.8E-05
+  8 :  -7.07E-01 1.61E-07 0.000 0.0062 0.9945 0.9945   1.00  1  1  1.1E-07
+  9 :  -7.07E-01 1.92E-09 0.000 0.0119 0.9906 0.9900   1.00  1  1  1.4E-09
+
+iter seconds digits       c*x               b*y
+  9      0.1  10.5 -7.0710678114e-01 -7.0710678116e-01
+|Ax-b| =   1.3e-09, [Ay-c]_+ =   1.8E-11, |x|=  1.4e+00, |y|=  1.2e+00
+
+Detailed timing (sec)
+   Pre          IPM          Post
+1.000E-02    6.000E-02    0.000E+00    
+Max-norms: ||b||=1, ||c|| = 1,
+Cholesky |add|=1, |skip| = 0, ||L.L|| = 29140.6.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.707107
+Problem is Solved
+</pre><img vspace="5" hspace="5" src="fir_chebychev_design__01.png" alt=""> <img vspace="5" hspace="5" src="fir_chebychev_design__02.png" alt=""> <p class="footer"><br>
+      Published with MATLAB&reg; 7.9<br></p></div><!--
+##### SOURCE BEGIN #####
+%% Chebychev design of an FIR filter given a desired H(w)
+
+% "Filter design" lecture notes (EE364) by S. Boyd
+% (figures are generated)
+%
+% Designs an FIR filter given a desired frequency response H_des(w).
+% The design is judged by the maximum absolute error (Chebychev norm).
+% This is a convex problem (after sampling it can be formulated as an SOCP).
+%
+%   minimize   max |H(w) - H_des(w)|     for w in [0,pi]
+%
+% where H is the frequency response function and variable is h
+% (the filter impulse response).
+%
+% Written for CVX by Almir Mutapcic 02/02/06
+
+%********************************************************************
+% problem specs
+%********************************************************************
+% number of FIR coefficients (including the zeroth one)
+n = 20;
+
+% rule-of-thumb frequency discretization (Cheney's Approx. Theory book)
+m = 15*n;
+w = linspace(0,pi,m)'; % omega
+
+%********************************************************************
+% construct the desired filter
+%********************************************************************
+% fractional delay
+D = 8.25;            % delay value
+Hdes = exp(-j*D*w);  % desired frequency response
+
+% Gaussian filter with linear phase (uncomment lines below for this design)
+% var = 0.05;
+% Hdes = 1/(sqrt(2*pi*var))*exp(-(w-pi/2).^2/(2*var));
+% Hdes = Hdes.*exp(-j*n/2*w);
+
+%*********************************************************************
+% solve the minimax (Chebychev) design problem
+%*********************************************************************
+% A is the matrix used to compute the frequency response
+% A(w,:) = [1 exp(-j*w) exp(-j*2*w) ... exp(-j*n*w)]
+A = exp( -j*kron(w,[0:n-1]) );
+
+% optimal Chebyshev filter formulation
+cvx_begin
+  variable h(n,1)
+  minimize( max( abs( A*h - Hdes ) ) )
+cvx_end
+
+% check if problem was successfully solved
+disp(['Problem is ' cvx_status])
+if ~strfind(cvx_status,'Solved')
+  h = [];
+end
+
+%*********************************************************************
+% plotting routines
+%*********************************************************************
+% plot the FIR impulse reponse
+figure(1)
+stem([0:n-1],h)
+xlabel('n')
+ylabel('h(n)')
+
+% plot the frequency response
+H = [exp(-j*kron(w,[0:n-1]))]*h;
+figure(2)
+% magnitude
+subplot(2,1,1);
+plot(w,20*log10(abs(H)),w,20*log10(abs(Hdes)),'REPLACE_WITH_DASH_DASH')
+xlabel('w')
+ylabel('mag H in dB')
+axis([0 pi -30 10])
+legend('optimized','desired','Location','SouthEast')
+% phase
+subplot(2,1,2)
+plot(w,angle(H))
+axis([0,pi,-pi,pi])
+xlabel('w'), ylabel('phase H(w)')
+
+##### SOURCE END #####
+--></body></html>

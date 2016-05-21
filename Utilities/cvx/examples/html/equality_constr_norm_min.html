@@ -1,0 +1,186 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      --><title>Equality constrained norm minimization.</title><meta name="generator" content="MATLAB 7.9"><meta name="date" content="2009-11-12"><meta name="m-file" content="equality_constr_norm_min_"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>Equality constrained norm minimization.</h1><pre class="codeinput"><span class="comment">% This script constructs a random equality-constrained norm minimization</span>
+<span class="comment">% problem and solves it using CVX. You can also change p to +2 or +Inf</span>
+<span class="comment">% to produce different results. Alternatively, you an replace</span>
+<span class="comment">%     norm( A * x - b, p )</span>
+<span class="comment">% with</span>
+<span class="comment">%     norm_largest( A * x - b, 'largest', p )</span>
+<span class="comment">% for 1 &lt;= p &lt;= 2 * n.</span>
+
+<span class="comment">% Generate data</span>
+p = 1;
+n = 10; m = 2*n; q=0.5*n;
+A = randn(m,n);
+b = randn(m,1);
+C = randn(q,n);
+d = randn(q,1);
+
+<span class="comment">% Create and solve problem</span>
+cvx_begin
+   variable <span class="string">x(n)</span>
+   dual <span class="string">variable</span> <span class="string">y</span>
+   minimize( norm( A * x - b, p ) )
+   subject <span class="string">to</span>
+        y : C * x == d;
+cvx_end
+
+<span class="comment">% Display results</span>
+disp( sprintf( <span class="string">'norm(A*x-b,%g):'</span>, p ) );
+disp( [ <span class="string">'   ans   =   '</span>, sprintf( <span class="string">'%7.4f'</span>, norm(A*x-b,p) ) ] );
+disp( <span class="string">'Optimal vector:'</span> );
+disp( [ <span class="string">'   x     = [ '</span>, sprintf( <span class="string">'%7.4f '</span>, x ), <span class="string">']'</span> ] );
+disp( <span class="string">'Residual vector:'</span> );
+disp( [ <span class="string">'   A*x-b = [ '</span>, sprintf( <span class="string">'%7.4f '</span>, A*x-b ), <span class="string">']'</span> ] );
+disp( <span class="string">'Equality constraints:'</span> );
+disp( [ <span class="string">'   C*x   = [ '</span>, sprintf( <span class="string">'%7.4f '</span>, C*x ), <span class="string">']'</span> ] );
+disp( [ <span class="string">'   d     = [ '</span>, sprintf( <span class="string">'%7.4f '</span>, d   ), <span class="string">']'</span> ] );
+disp( <span class="string">'Lagrange multiplier for C*x==d:'</span> );
+disp( [ <span class="string">'   y     = [ '</span>, sprintf( <span class="string">'%7.4f '</span>, y ), <span class="string">']'</span> ] );
+</pre><pre class="codeoutput"> 
+Calling sedumi: 50 variables, 25 equality constraints
+------------------------------------------------------------
+SeDuMi 1.21 by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+eqs m = 25, order n = 43, dim = 52, blocks = 22
+nnz(A) = 270 + 0, nnz(ADA) = 625, nnz(L) = 325
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            3.35E+01 0.000
+  1 :   1.53E+01 1.01E+01 0.000 0.3005 0.9000 0.9000   2.36  1  1  1.2E+00
+  2 :   1.72E+01 2.89E+00 0.000 0.2873 0.9000 0.9000   1.29  1  1  3.3E-01
+  3 :   1.78E+01 6.67E-01 0.000 0.2308 0.9000 0.9000   1.07  1  1  7.8E-02
+  4 :   1.80E+01 1.45E-01 0.000 0.2181 0.9000 0.9000   1.02  1  1  1.7E-02
+  5 :   1.80E+01 1.42E-02 0.000 0.0974 0.9900 0.9900   1.00  1  1  1.7E-03
+  6 :   1.80E+01 4.75E-04 0.000 0.0335 0.9907 0.9900   1.00  1  1  9.6E-05
+  7 :   1.80E+01 1.07E-07 0.000 0.0002 0.9999 0.9999   1.00  1  1  1.3E-08
+
+iter seconds digits       c*x               b*y
+  7      0.1   8.1  1.7972427055e+01  1.7972426900e+01
+|Ax-b| =   5.3e-09, [Ay-c]_+ =   1.9E-09, |x|=  8.5e+00, |y|=  8.1e+00
+
+Detailed timing (sec)
+   Pre          IPM          Post
+2.000E-02    1.200E-01    1.000E-02    
+Max-norms: ||b||=1.858593e+00, ||c|| = 1,
+Cholesky |add|=0, |skip| = 0, ||L.L|| = 2.65245.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +17.9724
+norm(A*x-b,1):
+   ans   =   17.9724
+Optimal vector:
+   x     = [  0.6963  0.1554  0.5142  0.3923 -0.4455  0.0931  0.4494 -0.3651 -0.4819 -0.5498 ]
+Residual vector:
+   A*x-b = [  1.1860 -0.0000  0.8197  0.0000  1.4400  2.4199  0.5118  1.9345  0.1147 -1.7785  2.6667 -0.0000  0.0000 -0.4222 -0.9773  0.9364 -0.7506  0.2294 -1.7848  0.0000 ]
+Equality constraints:
+   C*x   = [ -0.0638  0.6113  0.1093  1.8140  0.3120 ]
+   d     = [ -0.0638  0.6113  0.1093  1.8140  0.3120 ]
+Lagrange multiplier for C*x==d:
+   y     = [ -1.5037  1.2411 -2.9373  5.5888  2.3990 ]
+</pre><p class="footer"><br>
+      Published with MATLAB&reg; 7.9<br></p></div><!--
+##### SOURCE BEGIN #####
+%% Equality constrained norm minimization.
+
+% This script constructs a random equality-constrained norm minimization
+% problem and solves it using CVX. You can also change p to +2 or +Inf
+% to produce different results. Alternatively, you an replace
+%     norm( A * x - b, p )
+% with
+%     norm_largest( A * x - b, 'largest', p )
+% for 1 <= p <= 2 * n.
+
+% Generate data
+p = 1;
+n = 10; m = 2*n; q=0.5*n;
+A = randn(m,n);
+b = randn(m,1);
+C = randn(q,n);
+d = randn(q,1);
+
+% Create and solve problem
+cvx_begin
+   variable x(n)
+   dual variable y
+   minimize( norm( A * x - b, p ) )
+   subject to
+        y : C * x == d;
+cvx_end
+
+% Display results
+disp( sprintf( 'norm(A*x-b,%g):', p ) );
+disp( [ '   ans   =   ', sprintf( '%7.4f', norm(A*x-b,p) ) ] );
+disp( 'Optimal vector:' );
+disp( [ '   x     = [ ', sprintf( '%7.4f ', x ), ']' ] );
+disp( 'Residual vector:' );
+disp( [ '   A*x-b = [ ', sprintf( '%7.4f ', A*x-b ), ']' ] );
+disp( 'Equality constraints:' );
+disp( [ '   C*x   = [ ', sprintf( '%7.4f ', C*x ), ']' ] );
+disp( [ '   d     = [ ', sprintf( '%7.4f ', d   ), ']' ] );
+disp( 'Lagrange multiplier for C*x==d:' );
+disp( [ '   y     = [ ', sprintf( '%7.4f ', y ), ']' ] );
+
+##### SOURCE END #####
+--></body></html>
