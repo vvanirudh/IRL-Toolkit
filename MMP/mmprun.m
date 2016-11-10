@@ -105,6 +105,7 @@ cvx_begin
     variable V(states);
     variable S(1);
     minimize(sum_square(w)*0.5+S);
+    %minimize(sum(abs(w))*0.5+S);
     subject to
         Fmu'*w + S >= (1/states)*sum(V);
         V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
