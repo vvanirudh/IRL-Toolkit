@@ -15,6 +15,7 @@ function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
+global l1;
 % Fill in default parameters.
 algorithm_params = mmpdefaultparams(algorithm_params);
 
@@ -94,8 +95,35 @@ for s=1:states,
     end;
 end;
 
+%keyboard()
 % Run optimization.
+
 cvx_begin
+cvx_solver sdpt3
+    if verbosity ~= 0,
+        cvx_quiet(false);
+    else
+        cvx_quiet(true);
+    end;
+    cvx_quiet(true);
+    variable w(features);
+    variable V(states);
+    variable S(1);
+    if ~l1
+        minimize(sum_square(w)*0.5+S);
+    else
+        minimize(sum(abs(w))*0.5 + S);
+    end
+    subject to
+        Fmu'*w + S >= (1/states)*sum(V);
+        V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
+        S >= 0;
+cvx_end
+
+
+%{
+cvx_begin
+
     if verbosity ~= 0,
         cvx_quiet(false);
     else
@@ -103,13 +131,13 @@ cvx_begin
     end;
     variable w(features);
     variable V(states);
-    variable S(1);
-    minimize(sum_square(w)*0.5+S);
-    %minimize(sum(abs(w))*0.5+S);
+    
+    minimize(- Fmu'*w + sum(V)*(1/states) + 0.5*sum(abs(w))*N);
     subject to
-        Fmu'*w + S >= (1/states)*sum(V);
-        V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
+        V(sN) >= (F'*w) + L + mdp_data.discount*sum(V(eN).*eP,2);    
+
 cvx_end
+%}
 
 % Compute reward.
 r = reshape(F'*w,actions,states)';
