@@ -39,7 +39,9 @@ for s=1:mdp_data.states,
     [x,lane,speed] = highwaystatetocoord(s,mdp_params);
     
     % Write lane and speed features.
-    splittable(s,1:mdp_params.speeds) = [ones(1,speed) zeros(1,mdp_params.speeds-speed)];
+    % CHANNGED @avemula
+    % splittable(s,1:mdp_params.speeds) = [ones(1,speed) zeros(1,mdp_params.speeds-speed)];
+    splittable(s, speed) = 1;
     splittable(s,mdp_params.speeds+lane) = 1;
     splittablecont(s,1) = speed;
     splittablecont(s,2) = lane;
@@ -96,6 +98,50 @@ end;
 % Fill in the reward function.
 R_SCALE = 5;
 r = cartaverage(mdp_params.r_tree,feature_data)*R_SCALE;
+
+
+r = zeros(mdp_data.states, mdp_data.actions);
+cop_ind = [9, 41, 73, 105, 137, 169, 201, 233];
+for i=1:mdp_data.states
+    if mdp_params.policy_type == 'outlaw'
+        % CHeck speed. If 1 = -10, 2 = -5
+        if splittable(i, 1) == 1    
+            r(i, :) = r(i, :) -10;
+        elseif splittable(i, 2) == 1
+            r(i, :) = r(i, :) -5;
+        end
+        
+        % Check lane. If RL = -10
+        if splittable(i, mdp_params.speeds + 3) == 1
+            r(i, :) = r(i, :) - 10;
+        end
+        
+        % Check cop. If cop = -50
+        for j=1:length(cop_ind)
+           
+            if splittable(i, cop_ind(j)) == 1
+                r(i, :)  = r(i, :) - 50;
+            end
+            
+        end
+        
+    else
+        
+        % CHeck speed. If 4 = -10, 3 = -5
+        if splittable(i, 4) == 1    
+            r(i, :) = r(i, :) -10;
+        end
+        if splittable(i, 3) == 1
+            r(i, :) = r(i, :) - 5;
+        end
+        
+        % Check lane. If LL = -10
+%         if splittable(i, mdp_params.speeds + 1) == 1
+%             r(i, :) = r(i, :) - 10;
+%         end
+        
+    end
+end
 
 % Optionally, replace splittable.
 if mdp_params.continuous,

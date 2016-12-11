@@ -1,5 +1,5 @@
 % MMP algorithm implementation.
-function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
+function irl_result = mmprun_l1(algorithm_params,mdp_data,mdp_model,...
     feature_data,example_samples,true_features,verbosity)
 
 % algorithm_params - parameters of the MMP algorithm:
@@ -14,10 +14,6 @@ function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
 %       q - corresponding q function.
 %       p - corresponding policy.
 %       time - total running time
-
-irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
-    feature_data,example_samples,true_features,verbosity);
-return;
 
 % Fill in default parameters.
 algorithm_params = mmpdefaultparams(algorithm_params);
@@ -109,8 +105,8 @@ cvx_begin
     variable w(features);
     variable V(states);
     variable S(1);
-    minimize(sum_square(w)*0.5+S);
-%     minimize(sum(abs(w))*0.5 + S);
+%     minimize(sum_square(w)*0.5+S);
+    minimize(sum(abs(w))*0.5 + S);
     subject to
         Fmu'*w + S >= (1/states)*sum(V);
         V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);

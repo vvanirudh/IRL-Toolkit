@@ -1,5 +1,5 @@
 % MMP algorithm implementation.
-function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
+function irl_result = mmprun_subgrad(algorithm_params,mdp_data,mdp_model,...
     feature_data,example_samples,true_features,verbosity)
 
 % algorithm_params - parameters of the MMP algorithm:
@@ -15,9 +15,10 @@ function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
-irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
-    feature_data,example_samples,true_features,verbosity);
-return;
+% optim params
+n_iter = 400;
+lambda = 1;
+alpha = 0.95;
 
 % Fill in default parameters.
 algorithm_params = mmpdefaultparams(algorithm_params);
@@ -30,6 +31,10 @@ tic;
 [states,actions,transitions] = size(mdp_data.sa_p);
 [N,T] = size(example_samples);
 mdp_solve = str2func(strcat(mdp_model,'solve'));
+
+% set test params
+test_params.training_samples = N;
+test_params.training_sample_lengths = T;
 
 % Build feature membership matrix.
 if algorithm_params.all_features,
@@ -53,18 +58,7 @@ features = size(F,2);
 F = F';
 
 % Construct state expectations.
-muE = zeros(states*actions,1);
-ex_s = zeros(N,T);
-ex_a = zeros(N,T);
-for i=1:N,
-    for t=1:T,
-        ex_s(i,t) = example_samples{i,t}(1);
-        ex_a(i,t) = example_samples{i,t}(2);
-        idx = (ex_s(i,t)-1)*actions+ex_a(i,t);
-        muE(idx) = muE(idx) + mdp_data.discount^(t-1);
-    end;
-end;
-muE = muE/N;
+[muE, ex_s, ex_a] = calc_mu(N, T, states, actions, example_samples, mdp_data);
 Fmu = F*muE;
 
 % Construct loss vector.
@@ -98,26 +92,40 @@ for s=1:states,
     end;
 end;
 
-% Run optimization.
-cvx_begin
-    cvx_solver sdpt3;
-    if verbosity ~= 0,
-        cvx_quiet(false);
-    else
-        cvx_quiet(true);
-    end;
-    variable w(features);
-    variable V(states);
-    variable S(1);
-    minimize(sum_square(w)*0.5+S);
-%     minimize(sum(abs(w))*0.5 + S);
-    subject to
-        Fmu'*w + S >= (1/states)*sum(V);
-        V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
-cvx_end
+% opt loop
+w = zeros(features, 1);
+%t = 10;
+a = 1;
+b = 100;
+t = a / b;
+cost_vals = [];
+cost_subgrad(w, lambda, F, Fmu, muE, L)
+for i = 1:n_iter
+    % calc r
+    r = reshape(F'*w + L, actions, states)';
+    
+    % get subgradient
+    [subgrad, mu_hat] = calc_subgrad(N, T, w, lambda, F, Fmu, L, mdp_data, mdp_model, ...
+    test_params, r, states, actions);
+    cost = cost_subgrad(w, lambda, F, Fmu, mu_hat, L)
+    % update w
+    w_new = w - t*subgrad;
+%     r_new = reshape(F'*w_new + L, actions, states)';
+%     [~, mu_hat_new] = calc_subgrad(N, T, w_new, lambda, F, Fmu, L, mdp_data, mdp_model, ...
+%     test_params, r_new, states, actions);
+    %cost = cost_subgrad(w_new, lambda, F, Fmu, muE, L)
+    
+    %if cost_subgrad(w, lambda, F, Fmu, mu_hat, L) > cost
+    %    w = w_new;        
+    %    cost_vals = [cost_vals; cost];
+    %end
+    w = w_new;
+    t = a / (b + i)
+    i
+end
 
 % Compute reward.
-r = reshape(F'*w,actions,states)';
+r = reshape(F'*w, actions, states)';
 
 %{
 % Rescale reward.

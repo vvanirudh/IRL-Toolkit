@@ -26,12 +26,20 @@ r_tree = struct('type',1,'test',1+step*2,'total_leaves',3,...       % Test dista
         'gtTree',struct('type',0,'index',2,'mean',[1 1 1 1 1]),...  % Reward for being close
         'ltTree',struct('type',0,'index',3,'mean',[0 0 0 0 0])));   % Neutral reward for any other state.
 %}
+%{
 r_tree = struct('type',1,'test',1+step*2,'total_leaves',3,...       % Test distance to c1 1 shape
     'ltTree',struct('type',0,'index',1,'mean',[0,0,0,0,0]),... % Neutral reward for being elsewhere
     'gtTree',struct('type',1,'test',2+step*1,'total_leaves',2,...   % Test distance to c1 2 shape
         'gtTree',struct('type',0,'index',2,'mean',[1 1 1 1 1]),...  % Reward for being close
         'ltTree',struct('type',0,'index',3,'mean',[-2 -2 -2 -2 -2])));   % Penalty otherwise
+%}
 
+r_tree = struct('type',1,'test',1+step*2,'total_leaves',3,...       % Test distance to c1 1 shape
+    'ltTree',struct('type',0,'index',1,'mean',[0,0,0,0,0]),... % Neutral reward for being elsewhere
+    'gtTree',struct('type',1,'test',2+step*1,'total_leaves',2,...   % Test distance to c1 2 shape
+        'gtTree',struct('type',0,'index',2,'mean',[1 1 1 1 1]),...  % Reward for being close
+        'ltTree',struct('type',0,'index',3,'mean',[2 2 2 2 2])));   % Penalty otherwise
+    
 % Create default parameters.
 default_params = struct(...
     'r_tree',r_tree);

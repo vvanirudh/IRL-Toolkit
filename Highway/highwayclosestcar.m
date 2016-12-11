@@ -38,11 +38,11 @@ tablerow = zeros(1,(mdp_params.c1+mdp_params.c2)*8);
 for d=1:8,
     strt = (d-1)*(mdp_params.c1+mdp_params.c2);
     for i=1:mdp_params.c1,
-        tablerow(1,strt+i) = c1dsq(i) < d;
+        tablerow(1,strt+i) = c1dsq(i) == d;
     end;
     strt = (d-1)*(mdp_params.c1+mdp_params.c2)+mdp_params.c1;
     for i=1:mdp_params.c2,
-        tablerow(1,strt+i) = c2dsq(i) < d;
+        tablerow(1,strt+i) = c2dsq(i) == d;
     end;
 end;
 for i=1:mdp_params.c1,

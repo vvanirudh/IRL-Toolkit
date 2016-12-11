@@ -34,7 +34,8 @@ for s=1:mdp_data.states,
         for j=1:length(mdp_data.c1array{i}),
             cy = ceil(mdp_data.c1array{i}(j)/mdp_params.n);
             cx = mdp_data.c1array{i}(j)-(cy-1)*mdp_params.n;
-            d = sqrt((cx-x)^2 + (cy-y)^2);
+            %d = sqrt((cx-x)^2 + (cy-y)^2);
+            d = abs(cx - x) + abs(cy - y);
             c1dsq(i) = min(c1dsq(i),d);
         end;
     end;
@@ -42,7 +43,8 @@ for s=1:mdp_data.states,
         for j=1:length(mdp_data.c2array{i}),
             cy = ceil(mdp_data.c2array{i}(j)/mdp_params.n);
             cx = mdp_data.c2array{i}(j)-(cy-1)*mdp_params.n;
-            d = sqrt((cx-x)^2 + (cy-y)^2);
+            %d = sqrt((cx-x)^2 + (cy-y)^2);
+            d = abs(cx - x) + abs(cy - y);
             c2dsq(i) = min(c2dsq(i),d);
         end;
     end;
@@ -51,11 +53,11 @@ for s=1:mdp_data.states,
     for d=1:mdp_params.n-1,
         strt = (d-1)*(mdp_params.c1+mdp_params.c2);
         for i=1:mdp_params.c1,
-            splittable(s,strt+i) = c1dsq(i) < d;
+            splittable(s,strt+i) = c1dsq(i) == d;
         end;
         strt = (d-1)*(mdp_params.c1+mdp_params.c2)+mdp_params.c1;
         for i=1:mdp_params.c2,
-            splittable(s,strt+i) = c2dsq(i) < d;
+            splittable(s,strt+i) = c2dsq(i) == d;
         end;
     end;
     
@@ -79,6 +81,13 @@ end;
 % Fill in the reward function.
 R_SCALE = 5;
 r = cartaverage(mdp_params.r_tree,feature_data)*R_SCALE;
+
+% r = zeros(mdp_data.states, mdp_data.actions);
+% for i=1:mdp_data.states
+%     if splittable(i, 1) == 1
+%         r(i, :) = 5;
+%     end
+% end
 
 % Optionally, replace splittable.
 if mdp_params.continuous,

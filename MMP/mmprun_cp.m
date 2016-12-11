@@ -1,5 +1,5 @@
 % MMP algorithm implementation.
-function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
+function irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
     feature_data,example_samples,true_features,verbosity)
 
 % algorithm_params - parameters of the MMP algorithm:
@@ -15,9 +15,13 @@ function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
-irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
-    feature_data,example_samples,true_features,verbosity);
-return;
+% optim params
+n_iter = 400;
+lambda = 1;
+epsilon = 0.01;
+
+% mu set
+mu_set = [];
 
 % Fill in default parameters.
 algorithm_params = mmpdefaultparams(algorithm_params);
@@ -30,6 +34,10 @@ tic;
 [states,actions,transitions] = size(mdp_data.sa_p);
 [N,T] = size(example_samples);
 mdp_solve = str2func(strcat(mdp_model,'solve'));
+
+% set test params
+test_params.training_samples = N;
+test_params.training_sample_lengths = T;
 
 % Build feature membership matrix.
 if algorithm_params.all_features,
@@ -53,18 +61,7 @@ features = size(F,2);
 F = F';
 
 % Construct state expectations.
-muE = zeros(states*actions,1);
-ex_s = zeros(N,T);
-ex_a = zeros(N,T);
-for i=1:N,
-    for t=1:T,
-        ex_s(i,t) = example_samples{i,t}(1);
-        ex_a(i,t) = example_samples{i,t}(2);
-        idx = (ex_s(i,t)-1)*actions+ex_a(i,t);
-        muE(idx) = muE(idx) + mdp_data.discount^(t-1);
-    end;
-end;
-muE = muE/N;
+[muE, ex_s, ex_a] = calc_mu(N, T, states, actions, example_samples, mdp_data);
 Fmu = F*muE;
 
 % Construct loss vector.
@@ -98,26 +95,56 @@ for s=1:states,
     end;
 end;
 
-% Run optimization.
-cvx_begin
-    cvx_solver sdpt3;
-    if verbosity ~= 0,
-        cvx_quiet(false);
+% opt loop
+cost_vals = [];
+w = ones(features, 1);
+S_xi = 0;
+while true
+    r = reshape(F'*w + L, actions, states)';
+    
+    % solve MDP
+    mdp_solution = feval(strcat(mdp_model,'solve'), mdp_data, r);
+    
+    % get samples
+    examples = sampleexamples(mdp_model, mdp_data, mdp_solution, ...
+        test_params);
+    
+    % get mu
+    [mu_hat, ~, ~] = calc_mu(N, T, states, actions, examples, mdp_data);
+    
+    % iterate over past mu's
+    if size(mu_set,1) ~= 0
+        max_constr_val = max((F'*w + L)' * mu_set' - Fmu'*w);
+        max_constr_val = max_constr_val(1);
     else
-        cvx_quiet(true);
-    end;
-    variable w(features);
-    variable V(states);
-    variable S(1);
-    minimize(sum_square(w)*0.5+S);
-%     minimize(sum(abs(w))*0.5 + S);
-    subject to
-        Fmu'*w + S >= (1/states)*sum(V);
-        V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
-cvx_end
-
+        max_constr_val = 0;
+    end
+    
+    % check if we should add this to the constraint set
+    if size(mu_set, 1)==0 || (F'*w+L)'*mu_hat - Fmu'*w > max_constr_val + epsilon
+        mu_set = [mu_set; mu_hat'];        
+        % set up linprog
+        f = [ones(2*features,1)*lambda/2; 1];
+        Q = repmat(Fmu, 1, size(mu_set, 1)) - F * mu_set';
+        A = -[Q', -Q', ones(size(Q, 2), 1)];
+        b = - mu_set * L;
+        lb = [zeros(2*features, 1); -Inf];
+        
+        x = linprog(f, A, b, [], [], lb, []);
+        alph = x(1:features);
+        bet = x(features+1:2*features);
+        S_xi = x(end);
+        w = alph - bet;
+        
+    else
+        break;
+    end
+    
+    cost = lambda/2 * norm(w,1) + S_xi
+    cost_vals = [cost_vals; cost];
+end
 % Compute reward.
-r = reshape(F'*w,actions,states)';
+r = reshape(F'*w, actions, states)';
 
 %{
 % Rescale reward.
