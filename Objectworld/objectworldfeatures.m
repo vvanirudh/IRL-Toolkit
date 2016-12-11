@@ -82,12 +82,16 @@ end;
 R_SCALE = 5;
 r = cartaverage(mdp_params.r_tree,feature_data)*R_SCALE;
 
-% r = zeros(mdp_data.states, mdp_data.actions);
-% for i=1:mdp_data.states
-%     if splittable(i, 1) == 1
-%         r(i, :) = 5;
-%     end
-% end
+r = zeros(mdp_data.states, mdp_data.actions);
+for i=1:mdp_data.states
+    if splittable(i, 1) == 1
+        r(i, :) = 5;
+    end
+    
+    if splittable(i, 2) == 1
+        r(i, :) = r(i, :) + 3;
+    end
+end
 
 % Optionally, replace splittable.
 if mdp_params.continuous,

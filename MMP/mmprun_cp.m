@@ -15,10 +15,11 @@ function irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
+global lambda
+global epsilon
+
 % optim params
 n_iter = 400;
-lambda = 1;
-epsilon = 0.01;
 
 % mu set
 mu_set = [];
@@ -99,6 +100,8 @@ end;
 cost_vals = [];
 w = ones(features, 1);
 S_xi = 0;
+count = 0;
+fprintf('EPSILON : %f', epsilon);
 while true
     r = reshape(F'*w + L, actions, states)';
     
@@ -112,6 +115,7 @@ while true
     % get mu
     [mu_hat, ~, ~] = calc_mu(N, T, states, actions, examples, mdp_data);
     
+    max_constr_val = 0;
     % iterate over past mu's
     if size(mu_set,1) ~= 0
         max_constr_val = max((F'*w + L)' * mu_set' - Fmu'*w);
@@ -119,7 +123,8 @@ while true
     else
         max_constr_val = 0;
     end
-    
+    % fprintf('term1 %f\n', (F'*w+L)'*mu_hat - Fmu'*w);
+    % fprintf('term2 %f\n', max_constr_val);
     % check if we should add this to the constraint set
     if size(mu_set, 1)==0 || (F'*w+L)'*mu_hat - Fmu'*w > max_constr_val + epsilon
         mu_set = [mu_set; mu_hat'];        
@@ -130,12 +135,13 @@ while true
         b = - mu_set * L;
         lb = [zeros(2*features, 1); -Inf];
         
-        x = linprog(f, A, b, [], [], lb, []);
+        [x,~,~,output] = linprog(f, A, b, [], [], lb, []);
         alph = x(1:features);
         bet = x(features+1:2*features);
         S_xi = x(end);
         w = alph - bet;
-        
+        count = count + output.iterations
+        size(mu_set, 1)
     else
         break;
     end
@@ -173,4 +179,4 @@ time = toc;
 % Construct returned structure.
 irl_result = struct('r',r,'v',v,'p',p,'q',q,'r_itr',{r_itr},'model_itr',{wts_itr},...
     'model_r_itr',{tree_r_itr},'p_itr',{p_itr},'model_p_itr',{tree_p_itr},...
-    'time',time);
+    'time',time, 'sparsity', length(find(abs(w) > 1e-8)));

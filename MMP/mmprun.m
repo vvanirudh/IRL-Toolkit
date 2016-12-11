@@ -15,9 +15,21 @@ function irl_result = mmprun(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
-irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
+global l1
+global lambda
+
+if l1 == 3
+    % cutting plane
+    irl_result = mmprun_cp(algorithm_params,mdp_data,mdp_model,...
     feature_data,example_samples,true_features,verbosity);
-return;
+    return; 
+elseif l1 == 4
+    % subgrad
+    irl_result = mmprun_subgrad(algorithm_params,mdp_data,mdp_model,...
+    feature_data,example_samples,true_features,verbosity);
+    return;
+end
+
 
 % Fill in default parameters.
 algorithm_params = mmpdefaultparams(algorithm_params);
@@ -109,8 +121,11 @@ cvx_begin
     variable w(features);
     variable V(states);
     variable S(1);
-    minimize(sum_square(w)*0.5+S);
-%     minimize(sum(abs(w))*0.5 + S);
+    if l1 == 2
+        minimize(sum_square(w)* lambda/2+S);
+    elseif l1 == 1
+        minimize(sum(abs(w))*0.5*lambda + S);
+    end
     subject to
         Fmu'*w + S >= (1/states)*sum(V);
         V(sN) >= F'*w + L + mdp_data.discount*sum(V(eN).*eP,2);
@@ -146,4 +161,4 @@ time = toc;
 % Construct returned structure.
 irl_result = struct('r',r,'v',v,'p',p,'q',q,'r_itr',{r_itr},'model_itr',{wts_itr},...
     'model_r_itr',{tree_r_itr},'p_itr',{p_itr},'model_p_itr',{tree_p_itr},...
-    'time',time);
+    'time',time, 'sparsity', length(find(abs(w) > 1e-8)));

@@ -15,9 +15,10 @@ function irl_result = mmprun_subgrad(algorithm_params,mdp_data,mdp_model,...
 %       p - corresponding policy.
 %       time - total running time
 
+global lambda
+
 % optim params
-n_iter = 400;
-lambda = 1;
+n_iter = 200;
 alpha = 0.95;
 
 % Fill in default parameters.
@@ -154,4 +155,4 @@ time = toc;
 % Construct returned structure.
 irl_result = struct('r',r,'v',v,'p',p,'q',q,'r_itr',{r_itr},'model_itr',{wts_itr},...
     'model_r_itr',{tree_r_itr},'p_itr',{p_itr},'model_p_itr',{tree_p_itr},...
-    'time',time);
+    'time',time,  'sparsity', length(find(abs(w) > 1e-8)));
